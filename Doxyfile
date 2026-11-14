@@ -1,0 +1,25 @@
+# Konfiguracja Doxygen dla LcdTester.
+# Generowanie dokumentacji: w katalogu projektu uruchom `doxygen`,
+# wynik: docs/html/index.html
+
+PROJECT_NAME           = "LcdTester"
+PROJECT_BRIEF          = "Tester wyswietlaczy LCD SPI na ESP32"
+OUTPUT_DIRECTORY       = docs
+OUTPUT_LANGUAGE        = Polish
+INPUT                  = src include README.md
+FILE_PATTERNS          = *.h *.cpp
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */Secret.h
+USE_MDFILE_AS_MAINPAGE = README.md
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+JAVADOC_AUTOBRIEF      = NO
+MARKDOWN_SUPPORT       = YES
+SOURCE_BROWSER         = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+WARN_IF_UNDOCUMENTED   = YES
+QUIET                  = YES
+IMAGE_PATH             = images
