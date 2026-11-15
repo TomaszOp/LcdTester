@@ -180,14 +180,28 @@ function save(data) {
   try { localStorage.setItem('lcdtester', JSON.stringify(data)); } catch (e) {}
 }
 
+// Lista czestotliwosci dla modelu: domyslna i przekraczajace maks. sa oznaczone
+function fillFrequencies(m) {
+  const current = $('freq').value;
+  $('freq').innerHTML = cfg.frequencies.map(f => {
+    let label = (f / 1e6).toFixed(f % 1e6 ? 1 : 0) + ' MHz';
+    if (f === m.defaultFreq) label += ' (domyślna)';
+    else if (f > m.maxFreq) label += ' (ponad zalecaną)';
+    return `<option value="${f}">${label}</option>`;
+  }).join('');
+  $('freq').value = current || m.defaultFreq;
+}
+
+// Po zmianie modelu (applyDefaults) inwersja, R/B i szybkosc SPI wracaja do domyslnych modelu
 function fillResolutions(applyDefaults) {
   const m = cfg.models.find(x => x.id === $('model').value);
   $('res').innerHTML = m.resolutions
     .map((r, i) => `<option value="${i}">${r.w}x${r.h} - ${r.note}</option>`).join('');
+  fillFrequencies(m);
   if (applyDefaults) {
     $('invert').checked = m.invert;
     $('swaprb').checked = m.swapRb;
-    $('freq').value = m.maxFreq;
+    $('freq').value = m.defaultFreq;
   }
 }
 
@@ -195,8 +209,6 @@ async function loadConfig() {
   cfg = await (await fetch('/api/config')).json();
   $('board').textContent = cfg.board;
   $('model').innerHTML = cfg.models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-  $('freq').innerHTML = cfg.frequencies
-    .map(f => `<option value="${f}">${(f / 1e6).toFixed(f % 1e6 ? 1 : 0)} MHz</option>`).join('');
   $('pins').innerHTML = PIN_NAMES
     .map(p => `<label>${PIN_LABELS[p]} <input type="number" min="-1" max="48" id="pin_${p}" value="${cfg.pins[p]}"></label>`).join('');
   $('pinDefaults').textContent = PIN_NAMES.map(p => `${p.toUpperCase()} ${cfg.pins[p]}`).join(', ');

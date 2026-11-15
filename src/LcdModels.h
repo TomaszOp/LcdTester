@@ -66,7 +66,8 @@ struct LcdModel {
   LcdDriver driver;                  ///< Sterownik - wybor panelu LovyanGFX.
   bool invertDefault;                ///< Domyslna inwersja kolorow (wiekszosc ST7789 jej wymaga).
   bool swapRbDefault;                ///< Domyslna zamiana czerwony<->niebieski wzgledem LovyanGFX.
-  uint32_t maxFreqHz;                ///< Zalecana czestotliwosc zapisu SPI, domyslna na stronie.
+  uint32_t defaultFreqHz;            ///< Domyslna czestotliwosc SPI - bezpieczna, ustawiana na stronie po wyborze modelu.
+  uint32_t maxFreqHz;                ///< Maks. zalecana czestotliwosc SPI; wyzsze sa oznaczone na stronie.
   uint16_t memoryWidth;              ///< Szerokosc pamieci obrazu w sterowniku.
   uint16_t memoryHeight;             ///< Wysokosc pamieci obrazu w sterowniku.
   const LcdResolution* resolutions;  ///< Dostepne rozdzielczosci.

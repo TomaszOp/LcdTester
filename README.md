@@ -50,7 +50,7 @@ w przeglądarce.
 
 | Ustawienie | Opis |
 |---|---|
-| **Szybkość** | 1, 5, 10, 20, 26.7, 40, 80 MHz. Domyślnie zalecana dla modelu (ILI9341 40 MHz, ST7789 80 MHz, ST7735 26.7 MHz, ILI9488 20 MHz). Na długich przewodach zacznij od 10 MHz. |
+| **Szybkość** | 1, 5, 10, 20, 26.7, 40, 80 MHz. Po każdej zmianie modelu ustawia się jego **domyślna** (bezpieczna) częstotliwość, oznaczona na liście „(domyślna)”. Częstotliwości powyżej zalecanego maksimum są oznaczone „(ponad zalecaną)”. Na długich przewodach zacznij od 10 MHz. |
 | **Tryb SPI** | 0–3 (CPOL/CPHA). Zwykle 0. Tryb 3 pomaga przy modułach ST7789 240x240 bez pinu CS. |
 | **Odczyt ID przez SDA (3-wire)** | Dla modułów bez wyjścia SDO/MISO - sterownik odpowiada tą samą linią SDA. Dotyczy tylko odczytu ID. |
 | **Piny GPIO** | Rozwijana lista: SCLK, MOSI, MISO, CS, DC, RST, LED, z nazwami spotykanymi na modułach. Wartość -1 = niepodłączony. Pod listą widać domyślne piny z firmware i link „Przywróć domyślne”. Piny pamięci flash (np. GPIO 11–17 w C3) są odrzucane. |
@@ -177,6 +177,18 @@ Parametry `start` / `pattern` / `readid`: `model`, `res`, `rot`, `freq`, `mode`,
 model – w `src/LcdModels.h`. Strona WWW pobiera listę z `/api/config`, więc nowy model
 pojawia się na niej sam, bez zmian w HTML.
 
+Obecny spis:
+
+| Model | Rozdzielczości | Domyślna SPI | Maks. zalecana SPI | Inwersja | Oczekiwane ID |
+|---|---|---|---|---|---|
+| ILI9341 | 240x320 | 40 MHz | 40 MHz | nie | `D3` = 00 93 41 |
+| ST7789 | 240x320, 240x240, 240x280, 170x320, 172x320, 135x240 | 40 MHz | 80 MHz | tak | `04` = 85 85 52 |
+| ST7735 | 128x160 (2 warianty), 128x128, 80x160 | 20 MHz | 26.7 MHz | nie | `04` = 7C 89 F0 |
+| ILI9488 | 320x480 | 20 MHz | 40 MHz | nie | `D3` = 00 94 88 |
+
+Domyślna częstotliwość (`defaultFreqHz`) to bezpieczna wartość ustawiana na stronie
+po wyborze modelu; maksymalna (`maxFreqHz`) służy tylko do oznaczenia szybszych pozycji na liście.
+
 ### Nowa rozdzielczość istniejącego modelu
 
 Wystarczy dopisać wiersz do tablicy rozdzielczości modelu, np. dla ST7789:
@@ -227,8 +239,9 @@ Przykład dla sterownika `GC9A01` (okrągły 240x240):
 
    const LcdModel LCD_MODELS[] = {
      ...
-     // id, nazwa, sterownik, inwersja, zamiana R/B, SPI Hz, pamięć szer., wys.
-     { "gc9a01", "GC9A01", LcdDriver::GC9A01, true, false, 40000000, 240, 240,
+     // id, nazwa, sterownik, inwersja, zamiana R/B,
+     // domyślna SPI Hz, maks. SPI Hz, pamięć szer., wys.
+     { "gc9a01", "GC9A01", LcdDriver::GC9A01, true, false, 40000000, 80000000, 240, 240,
        GC9A01_RES, COUNT(GC9A01_RES), GC9A01_ID, COUNT(GC9A01_ID) },
    };
    ```

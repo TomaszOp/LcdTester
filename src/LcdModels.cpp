@@ -98,16 +98,19 @@ static const LcdIdStep ILI9488_ID[] = {
 /// Liczba elementow tablicy statycznej.
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
+// Kolejnosc pol: id, nazwa, sterownik, inwersja, zamiana R/B,
+// domyslna SPI, maks. SPI, pamiec szer., wys., rozdzielczosci, kroki ID.
 const LcdModel LCD_MODELS[] = {
-  { "ili9341", "ILI9341", LcdDriver::ILI9341, false, false, 40000000, 240, 320,
+  { "ili9341", "ILI9341", LcdDriver::ILI9341, false, false, 40000000, 40000000, 240, 320,
     ILI9341_RES, COUNT(ILI9341_RES), ILI9341_ID, COUNT(ILI9341_ID) },
-  { "st7789",  "ST7789",  LcdDriver::ST7789,  true,  false, 80000000, 240, 320,
+  // ST7789 bywa szybki (80 MHz), ale wiele modulow na przewodach tego nie wytrzymuje
+  { "st7789",  "ST7789",  LcdDriver::ST7789,  true,  false, 40000000, 80000000, 240, 320,
     ST7789_RES, COUNT(ST7789_RES), ST7789_ID, COUNT(ST7789_ID) },
   // ST7735 wg dokumentacji do ok. 15 MHz, w praktyce dziala do ~27 MHz
-  { "st7735",  "ST7735",  LcdDriver::ST7735,  false, false, 26666667, 132, 162,
+  { "st7735",  "ST7735",  LcdDriver::ST7735,  false, false, 20000000, 26666667, 132, 162,
     ST7735_RES, COUNT(ST7735_RES), ST7735_ID, COUNT(ST7735_ID) },
   // ILI9488 wg dokumentacji zapis do 20 MHz, w praktyce czesto dziala wiecej
-  { "ili9488", "ILI9488", LcdDriver::ILI9488, false, false, 20000000, 320, 480,
+  { "ili9488", "ILI9488", LcdDriver::ILI9488, false, false, 20000000, 40000000, 320, 480,
     ILI9488_RES, COUNT(ILI9488_RES), ILI9488_ID, COUNT(ILI9488_ID) },
 };
 const uint8_t LCD_MODEL_COUNT = sizeof(LCD_MODELS) / sizeof(LCD_MODELS[0]);

@@ -72,6 +72,7 @@ void WebServerApp::handleConfig() {
     json += "{\"id\":\"" + jsonEscape(model.id) + "\",\"name\":\"" + jsonEscape(model.name) +
             "\",\"invert\":" + (model.invertDefault ? "true" : "false") +
             ",\"swapRb\":" + (model.swapRbDefault ? "true" : "false") +
+            ",\"defaultFreq\":" + String(model.defaultFreqHz) +
             ",\"maxFreq\":" + String(model.maxFreqHz) + ",\"resolutions\":[";
     for (uint8_t r = 0; r < model.resolutionCount; r++) {
       const LcdResolution& res = model.resolutions[r];
@@ -93,7 +94,7 @@ void WebServerApp::handleStart(TestRunner::Mode mode) {
     return;
   }
   config.resolutionIndex = _server.arg("res").toInt();
-  config.spiFreqHz = _server.hasArg("freq") ? _server.arg("freq").toInt() : config.model->maxFreqHz;
+  config.spiFreqHz = _server.hasArg("freq") ? _server.arg("freq").toInt() : config.model->defaultFreqHz;
   config.spiMode = constrain(_server.arg("mode").toInt(), 0, 3);
   config.rotation = constrain(_server.arg("rot").toInt(), 0, 7);
   config.invert = _server.hasArg("invert") ? _server.arg("invert") == "1" : config.model->invertDefault;
