@@ -39,10 +39,10 @@ w przeglądarce.
 
 | Ustawienie | Opis |
 |---|---|
-| **Model** | Sterownik wyświetlacza: ILI9341, ST7789, ST7735, ILI9488. |
+| **Model** | Sterownik wyświetlacza: ILI9341, ST7789, ST7735, ILI9488, GC9A01A. |
 | **Obrót** | 0°, 90°, 180°, 270°. |
 | **Rozdzielczość** | Lista zależna od modelu, z opisem przekątnej i wariantu modułu. Każda pozycja ma wpisane przesunięcie obszaru w pamięci sterownika. |
-| **Inwersja kolorów** | Odwraca kolory. Większość ST7789 i ekrany 0.96" ST7735 jej wymagają; ustawiana domyślnie wg modelu. |
+| **Inwersja kolorów** | Odwraca kolory. Większość ST7789, GC9A01A i ekrany 0.96" ST7735 jej wymagają; ustawiana domyślnie wg modelu. |
 | **Zamień czerwony i niebieski** | Gdy w fazie 1 napis RED jest na niebieskim tle. Domyślnie wyłączone = kolory tak, jak ustawia je LovyanGFX. |
 | **Jasność podświetlenia** | Suwak 0–100 %, sygnał PWM na pinie LED. Działa od razu, także w trakcie testu. 100 % = pełny, stały stan wysoki. |
 
@@ -185,6 +185,7 @@ Obecny spis:
 | ST7789 | 240x320, 240x240, 240x280, 170x320, 172x320, 135x240 | 40 MHz | 80 MHz | tak | `04` = 85 85 52 |
 | ST7735 | 128x160 (2 warianty), 128x128, 80x160 | 20 MHz | 26.7 MHz | nie | `04` = 7C 89 F0 |
 | ILI9488 | 320x480 | 20 MHz | 40 MHz | nie | `D3` = 00 94 88 |
+| GC9A01A | 240x240 (okrągły) | 40 MHz | 80 MHz | tak | `04` = 00 9A 01 |
 
 Domyślna częstotliwość (`defaultFreqHz`) to bezpieczna wartość ustawiana na stronie
 po wyborze modelu; maksymalna (`maxFreqHz`) służy tylko do oznaczenia szybszych pozycji na liście.
@@ -206,13 +207,14 @@ Przesunięcie to miejsce, w którym widoczny obszar zaczyna się w pamięci ster
 
 ### Nowy model
 
-Przykład dla sterownika `GC9A01` (okrągły 240x240):
+Przykład dla sterownika `ST7796` (320x480, 3.5"/4.0"), którego jeszcze nie ma w spisie.
+Tak samo został dodany GC9A01A – można podejrzeć jego wpisy w kodzie.
 
 1. **`src/LcdModels.h`** – dodaj sterownik do `LcdDriver`:
    ```cpp
    enum class LcdDriver : uint8_t {
-     ILI9341, ST7789, ST7735, ILI9488,
-     GC9A01,   ///< GC9A01, okrągły 240x240.
+     ILI9341, ST7789, ST7735, ILI9488, GC9A01A,
+     ST7796,   ///< ST7796, 320x480.
    };
    ```
 
@@ -220,34 +222,34 @@ Przykład dla sterownika `GC9A01` (okrągły 240x240):
    (lista paneli: katalog `lgfx/v1/panel` biblioteki):
    ```cpp
    // LcdDevice.h
-   lgfx::Panel_GC9A01 _panelGc9a01;  ///< Panel dla LcdDriver::GC9A01.
+   lgfx::Panel_ST7796 _panelSt7796;  ///< Panel dla LcdDriver::ST7796.
    // LcdDevice.cpp, switch w konstruktorze
-   case LcdDriver::GC9A01: _panel = &_panelGc9a01; break;
+   case LcdDriver::ST7796: _panel = &_panelSt7796; break;
    ```
 
 3. **`src/LcdModels.cpp`** – dopisz rozdzielczości, kroki odczytu ID i wpis do `LCD_MODELS`:
    ```cpp
-   static const LcdResolution GC9A01_RES[] = {
-     { 240, 240, 0, 0, "1.28\" okrągły" },
+   static const LcdResolution ST7796_RES[] = {
+     { 320, 480, 0, 0, "3.5\" / 4.0\"" },
    };
 
    // Kroki odczytu ID wg dokumentacji sterownika
-   static const LcdIdStep GC9A01_ID[] = {
+   static const LcdIdStep ST7796_ID[] = {
      // komenda, bajty, takty dummy, metoda, nazwa, sprawdzać?, oczekiwane
-     { 0x04, 3, 1, IdReadMethod::Direct, "RDDID", true, { 0x00, 0x9A, 0x01 } },
+     { 0xD3, 3, 8, IdReadMethod::Direct, "RDID4", true, { 0x00, 0x77, 0x96 } },
    };
 
    const LcdModel LCD_MODELS[] = {
      ...
      // id, nazwa, sterownik, inwersja, zamiana R/B,
      // domyślna SPI Hz, maks. SPI Hz, pamięć szer., wys.
-     { "gc9a01", "GC9A01", LcdDriver::GC9A01, true, false, 40000000, 80000000, 240, 240,
-       GC9A01_RES, COUNT(GC9A01_RES), GC9A01_ID, COUNT(GC9A01_ID) },
+     { "st7796", "ST7796", LcdDriver::ST7796, false, false, 20000000, 40000000, 320, 480,
+       ST7796_RES, COUNT(ST7796_RES), ST7796_ID, COUNT(ST7796_ID) },
    };
    ```
 
 4. Opcjonalnie w `src/LcdIdReader.cpp` dopisz charakterystyczną parę bajtów do `SIGNATURES` –
-   wtedy odczyt ID innego modelu podpowie „prawdopodobnie GC9A01”.
+   wtedy odczyt ID innego modelu podpowie „prawdopodobnie ST7796” (dla ST7796 już jest).
 
 5. Skompiluj (`pio run`), wgraj i sprawdź: **Obraz testowy** (kolory, ramka, narożniki),
    **Odczytaj ID** i pełny test.

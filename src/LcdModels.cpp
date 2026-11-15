@@ -49,6 +49,15 @@ static const LcdResolution ILI9488_RES[] = {
 };
 
 // ---------------------------------------------------------------------------
+// GC9A01A - okragly 240x240, pamiec 240x240 (bez przesuniec). Narozniki
+// kwadratowego obrazu sa poza okregiem, wiec ramka obrazu testowego jest niewidoczna.
+// ---------------------------------------------------------------------------
+/// Rozdzielczosci GC9A01A.
+static const LcdResolution GC9A01A_RES[] = {
+  { 240, 240, 0, 0, "1.28\" okragly" },
+};
+
+// ---------------------------------------------------------------------------
 // Odczyt ID - kazdy sterownik wg wlasnej dokumentacji
 // ---------------------------------------------------------------------------
 // ILI9341: ID w rejestrze D3 (RDID4) = 00 93 41. Przez SPI czesc ukladow oddaje go
@@ -82,6 +91,17 @@ static const LcdIdStep ST7735_ID[] = {
   { 0x09, 4, 1, IdReadMethod::Direct, "RDDST status", false, {} },
 };
 
+// GC9A01A: RDDID (04) = 00 9A 01 po 1 takcie dummy; RDID1..3 (DA/DB/DC) po jednym bajcie.
+// Moduly zwykle nie maja wyprowadzonego SDO - do odczytu uzyj opcji 3-wire.
+/// Kroki odczytu ID dla GC9A01 / GC9A01A.
+static const LcdIdStep GC9A01A_ID[] = {
+  { 0x04, 3, 1, IdReadMethod::Direct, "RDDID", true, { 0x00, 0x9A, 0x01 } },
+  { 0xDA, 1, 0, IdReadMethod::Direct, "RDID1", true, { 0x00 } },
+  { 0xDB, 1, 0, IdReadMethod::Direct, "RDID2", true, { 0x9A } },
+  { 0xDC, 1, 0, IdReadMethod::Direct, "RDID3", true, { 0x01 } },
+  { 0x09, 4, 1, IdReadMethod::Direct, "RDDST status", false, {} },
+};
+
 // ILI9488: ID w RDID4 (D3) = 00 94 88, po bajcie dummy. Uwaga: w wielu modulach
 // ILI9488 linia SDO nie przechodzi w stan wysokiej impedancji - nie dzielic jej z innymi.
 /// Kroki odczytu ID dla ILI9488.
@@ -112,6 +132,9 @@ const LcdModel LCD_MODELS[] = {
   // ILI9488 wg dokumentacji zapis do 20 MHz, w praktyce czesto dziala wiecej
   { "ili9488", "ILI9488", LcdDriver::ILI9488, false, false, 20000000, 40000000, 320, 480,
     ILI9488_RES, COUNT(ILI9488_RES), ILI9488_ID, COUNT(ILI9488_ID) },
+  // GC9A01A zwykle dziala do 80 MHz; wymaga inwersji kolorow
+  { "gc9a01a", "GC9A01A", LcdDriver::GC9A01A, true, false, 40000000, 80000000, 240, 240,
+    GC9A01A_RES, COUNT(GC9A01A_RES), GC9A01A_ID, COUNT(GC9A01A_ID) },
 };
 const uint8_t LCD_MODEL_COUNT = sizeof(LCD_MODELS) / sizeof(LCD_MODELS[0]);
 

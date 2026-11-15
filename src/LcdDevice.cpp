@@ -28,6 +28,7 @@ LcdDevice::LcdDevice(const LcdTestConfig& config) {
     case LcdDriver::ST7789:  _panel = &_panelSt7789;  break;
     case LcdDriver::ST7735:  _panel = &_panelSt7735;  break;
     case LcdDriver::ILI9488: _panel = &_panelIli9488; break;
+    case LcdDriver::GC9A01A: _panel = &_panelGc9a01;  break;
   }
   _panel->setBus(&_bus);
 

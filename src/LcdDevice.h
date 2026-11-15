@@ -41,7 +41,7 @@ struct LcdTestConfig {
  * dzieki czemu kolejny test moze uzyc innych ustawien bez restartu ESP.
  *
  * Start wyswietlacza (sekwencja inicjalizacji) wykonuje sam LovyanGFX
- * wlasciwym panelem: Panel_ILI9341, Panel_ST7789, Panel_ST7735S, Panel_ILI9488.
+ * wlasciwym panelem: Panel_ILI9341, Panel_ST7789, Panel_ST7735S, Panel_ILI9488, Panel_GC9A01.
  * Podswietleniem steruje osobno klasa Backlight.
  */
 class LcdDevice : public lgfx::LGFX_Device {
@@ -67,5 +67,6 @@ class LcdDevice : public lgfx::LGFX_Device {
   lgfx::Panel_ST7789 _panelSt7789;       ///< Panel dla LcdDriver::ST7789.
   lgfx::Panel_ST7735S _panelSt7735;      ///< Panel dla LcdDriver::ST7735.
   lgfx::Panel_ILI9488 _panelIli9488;     ///< Panel dla LcdDriver::ILI9488.
+  lgfx::Panel_GC9A01 _panelGc9a01;       ///< Panel dla LcdDriver::GC9A01A.
   lgfx::Panel_Device* _panel = nullptr;  ///< Panel wybrany dla biezacego modelu.
 };

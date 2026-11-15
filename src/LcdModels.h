@@ -15,6 +15,7 @@ enum class LcdDriver : uint8_t {
   ST7789,   ///< ST7789, pamiec 240x320, rozne mniejsze matryce.
   ST7735,   ///< ST7735 / ST7735S, pamiec 132x162.
   ILI9488,  ///< ILI9488, 320x480, przez SPI kolor 18-bit.
+  GC9A01A,  ///< GC9A01 / GC9A01A, okragly 240x240.
 };
 
 /**
