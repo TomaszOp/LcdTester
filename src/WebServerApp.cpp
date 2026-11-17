@@ -36,6 +36,7 @@ void WebServerApp::begin() {
   _server.on("/api/pattern", HTTP_POST, [this] { handleStart(TestRunner::Mode::Pattern); });
   _server.on("/api/readid", HTTP_POST, [this] { handleStart(TestRunner::Mode::ReadId); });
   _server.on("/api/touch", HTTP_POST, [this] { handleStart(TestRunner::Mode::TouchTest); });
+  _server.on("/api/touchraw", HTTP_POST, [this] { handleStart(TestRunner::Mode::TouchRaw); });
   _server.on("/api/stop", HTTP_POST, [this] { handleStop(); });
   _server.on("/api/status", HTTP_GET, [this] { handleStatus(); });
   _server.on("/api/brightness", HTTP_POST, [this] { handleBrightness(); });

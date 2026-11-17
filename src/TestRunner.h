@@ -34,10 +34,12 @@ class TestRunner {
     Pattern,   ///< Tylko start LCD i jeden statyczny obraz testowy.
     ReadId,    ///< Sam odczyt ID sterownika (LcdIdReader, bez LovyanGFX).
     TouchTest, ///< Test i kalibracja dotyku (TouchTest).
+    TouchRaw,  ///< Podglad surowych odczytow dotyku przez TOUCH_RAW_MS (diagnostyka).
   };
 
   static constexpr uint32_t PHASE_DURATION_MS = 10000;  ///< Czas jednej fazy testu.
   static constexpr uint8_t PHASE_COUNT = 3;             ///< Liczba faz testu.
+  static constexpr uint32_t TOUCH_RAW_MS = 30000;       ///< Czas podgladu surowych odczytow dotyku.
 
   /// Migawka stanu do wyslania na strone (kopia, bezpieczna miedzy zadaniami).
   struct Status {
@@ -98,6 +100,8 @@ class TestRunner {
   State runReadId();
   /// Test i kalibracja dotyku.
   State runTouch();
+  /// Podglad surowych odczytow dotyku (X, Y, Z1, Z2, nacisk) - diagnostyka.
+  State runTouchRaw();
   /// Ustawia komunikat widoczny na stronie.
   void setMessage(const String& msg);
 

@@ -72,7 +72,7 @@ dotyku – model, rozdzielczość, obrót, SPI – pochodzi z sekcji „Wyświet
 
 | Kontroler | Szyna | Uwagi |
 |---|---|---|
-| **XPT2046** | SPI | Rezystancyjny, typowy przy ILI9341 2.4–3.2". Wspólna lub osobna magistrala. |
+| **XPT2046** | SPI | Rezystancyjny, typowy przy ILI9341 2.4–3.2". Wspólna lub osobna magistrala. Dotyk uznawany jest tylko przy rzeczywistym nacisku (pomiar Z1/Z2), więc T_IRQ nie jest wymagany. |
 | **STMPE610** | SPI | Rezystancyjny. Wspólna lub osobna magistrala. |
 | **FT6206 / FT6336** | I2C | Pojemnościowy, adres 0x38. |
 | **CST816S** | I2C | Pojemnościowy (często przy GC9A01 i ST7789), adres 0x15. |
@@ -81,7 +81,7 @@ dotyku – model, rozdzielczość, obrót, SPI – pochodzi z sekcji „Wyświet
 | Ustawienie | Opis |
 |---|---|
 | **CS (T_CS), IRQ (T_IRQ)** | SPI: pin wyboru kontrolera dotyku (musi być inny niż CS wyświetlacza) i opcjonalny pin dotknięcia. |
-| **Osobna magistrala SPI** | Domyślnie dotyk dzieli SCLK, MOSI i MISO z wyświetlaczem (2,5 MHz). Po zaznaczeniu podaje się T_CLK, T_DIN, T_DO – magistrala jest programowa (ESP32-C3 ma jeden wolny sprzętowy SPI, zajęty przez wyświetlacz). Działa dla obu kontrolerów SPI: XPT2046 i STMPE610. |
+| **Osobna magistrala SPI** | Domyślnie dotyk dzieli SCLK, MOSI i MISO z wyświetlaczem (1 MHz). Po zaznaczeniu podaje się T_CLK, T_DIN, T_DO – magistrala jest programowa (ESP32-C3 ma jeden wolny sprzętowy SPI, zajęty przez wyświetlacz). Działa dla obu kontrolerów SPI: XPT2046 i STMPE610. |
 | **SDA, SCL, Adres I2C, INT, RST** | I2C: piny i adres (np. `0x38`); INT i RST opcjonalne. Adres ustawia się sam po wyborze kontrolera. |
 
 Wspólna magistrala wymaga podłączenia MISO wyświetlacza (dane dotyku wracają tą linią).
@@ -176,6 +176,7 @@ Kod ma budowę modułową; każdy plik `.h` jest opisany w formacie Doxygen
 | `src/LcdIdReader.h/.cpp` | Programowy odczyt ID sterownika i porównanie z modelem. |
 | `src/TouchModels.h/.cpp` | **Spis kontrolerów dotyku**: szyna, adres I2C, obsługa osobnej magistrali. |
 | `src/TouchTest.h/.cpp` | Test dotyku: kalibracja z 8 punktów, weryfikacja na tych samych punktach, ekran wyniku, rysowanie palcem. |
+| `src/TouchXpt2046.h/.cpp` | XPT2046 na wspólnej magistrali z pomiarem nacisku (Z = Z1 + 4095 − Z2, próg 150) – eliminuje dotknięcia „fantomowe”, które daje sterownik LovyanGFX bez pinu T_IRQ. |
 | `src/SoftXpt2046.h/.cpp` | XPT2046 na osobnej, programowej magistrali SPI (sterownik zgodny z LovyanGFX). |
 | `src/SoftStmpe610.h/.cpp` | STMPE610 na osobnej, programowej magistrali SPI (sekwencja startu jak w LovyanGFX, automatyczny wybór trybu SPI 0/1). |
 | `src/Backlight.h/.cpp` | Podświetlenie – PWM na pinie LED. |

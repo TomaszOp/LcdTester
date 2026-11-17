@@ -112,7 +112,7 @@ bool TestRunner::start(const LcdTestConfig& config, Mode mode, String& error) {
     error = "Odczyt ID wymaga pinu MISO albo trybu SPI 3-wire";
     return false;
   }
-  if (mode == Mode::TouchTest && !validateTouch(config, error)) return false;
+  if ((mode == Mode::TouchTest || mode == Mode::TouchRaw) && !validateTouch(config, error)) return false;
   if (config.spiFreqHz < 100000 || config.spiFreqHz > 80000000) {
     error = "Czestotliwosc SPI poza zakresem 0.1-80 MHz";
     return false;
@@ -165,6 +165,7 @@ void TestRunner::run() {
     case Mode::Pattern: finalState = runPattern(); break;
     case Mode::ReadId:  finalState = runReadId();  break;
     case Mode::TouchTest: finalState = runTouch(); break;
+    case Mode::TouchRaw:  finalState = runTouchRaw(); break;
     default:            finalState = runPhases();  break;
   }
   // Najpierw zwalniamy uchwyt zadania, potem zmieniamy stan - wtedy mozna od razu
@@ -208,6 +209,49 @@ TestRunner::State TestRunner::runTouch() {
   Serial.printf("[DOTYK] %s\n%s\n", _message, _touch.calibrationText);
   if (_stopRequested) return State::Stopped;
   return done && _touch.ok ? State::Done : State::Error;
+}
+
+TestRunner::State TestRunner::runTouchRaw() {
+  LcdDevice lcd(_config);
+  if (!lcd.begin()) {
+    setMessage("Blad inicjalizacji wyswietlacza");
+    return State::Error;
+  }
+  lcd.setRotation(_config.rotation);
+  if (!lcd.beginTouch()) {
+    setMessage("Blad inicjalizacji dotyku - sprawdz kontroler i piny");
+    return State::Error;
+  }
+  lcd.fillScreen(TFT_BLACK);
+  lcd.setFont(&fonts::Font2);
+  lcd.setTextDatum(textdatum_t::top_left);
+  lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  lcd.drawString("Podglad dotyku (30 s)", 4, 4);
+
+  TouchXpt2046* xpt = lcd.xpt2046();
+  char buf[96];
+  const uint32_t start = millis();
+  while (!_stopRequested && millis() - start < TOUCH_RAW_MS) {
+    lgfx::touch_point_t tp;
+    const bool touched = lcd.getTouchRaw(&tp, 1) > 0;
+    if (xpt) {
+      // Pomiar z kontrolera zawsze, takze bez dotyku - widac Z1/Z2 i nacisk wzgledem progu
+      const TouchXpt2046::Sample s = xpt->lastSample();
+      snprintf(buf, sizeof(buf), "%s X=%d Y=%d Z1=%d Z2=%d nacisk=%d (prog %d)",
+               touched ? "DOTYK" : "brak", s.x, s.y, s.z1, s.z2, s.z, TouchXpt2046::PRESSURE_THRESHOLD);
+    } else if (touched) {
+      snprintf(buf, sizeof(buf), "DOTYK X=%d Y=%d nacisk=%u", tp.x, tp.y, tp.size);
+    } else {
+      snprintf(buf, sizeof(buf), "brak dotyku");
+    }
+    setMessage(buf);
+    lcd.fillRect(0, 24, lcd.width(), 40, TFT_BLACK);
+    lcd.setTextColor(touched ? TFT_GREEN : TFT_DARKGREY, TFT_BLACK);
+    lcd.drawString(buf, 4, 26);
+    delay(150);
+  }
+  setMessage("Podglad dotyku zakonczony");
+  return _stopRequested ? State::Stopped : State::Done;
 }
 
 TestRunner::State TestRunner::runReadId() {

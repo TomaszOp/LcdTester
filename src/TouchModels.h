@@ -41,7 +41,7 @@ extern const TouchModel TOUCH_MODELS[];
 extern const uint8_t TOUCH_MODEL_COUNT;
 
 /// Czestotliwosc SPI dotyku przy wspolnej magistrali (kontrolery dotyku sa wolne).
-constexpr uint32_t TOUCH_SPI_FREQ_HZ = 2500000;
+constexpr uint32_t TOUCH_SPI_FREQ_HZ = 1000000;
 
 /**
  * @brief Wyszukuje kontroler po identyfikatorze z API.

@@ -22,6 +22,7 @@
  * | POST | /api/pattern     | start LCD i jeden statyczny obraz testowy |
  * | POST | /api/readid      | odczyt ID sposobem wybranego modelu, bez LovyanGFX (MISO lub spi3wire=1) |
  * | POST | /api/touch       | test i kalibracja dotyku (wyswietlacz z tych samych parametrow) |
+ * | POST | /api/touchraw    | 30 s podgladu surowych odczytow dotyku (diagnostyka) |
  * | POST | /api/stop        | przerwanie testu |
  * | GET  | /api/status      | stan testu i wyniki |
  * | POST | /api/brightness  | jasnosc podswietlenia, parametr value=0..100 |

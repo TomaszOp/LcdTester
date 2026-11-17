@@ -11,6 +11,7 @@
 #include "LcdModels.h"
 #include "SoftStmpe610.h"
 #include "SoftXpt2046.h"
+#include "TouchXpt2046.h"
 #include "TouchModels.h"
 
 /**
@@ -81,6 +82,9 @@ class LcdDevice : public lgfx::LGFX_Device {
    */
   bool beginTouch();
 
+  /// @return Sterownik XPT2046 na wspolnej magistrali, gdy jest uzywany (diagnostyka), inaczej nullptr.
+  TouchXpt2046* xpt2046() { return _touch == &_touchXpt2046 ? &_touchXpt2046 : nullptr; }
+
  private:
   lgfx::Bus_SPI _bus;                    ///< Szyna SPI (SPI2_HOST, DMA).
   lgfx::Panel_ILI9341 _panelIli9341;     ///< Panel dla LcdDriver::ILI9341.
@@ -90,7 +94,7 @@ class LcdDevice : public lgfx::LGFX_Device {
   lgfx::Panel_GC9A01 _panelGc9a01;       ///< Panel dla LcdDriver::GC9A01A.
   lgfx::Panel_Device* _panel = nullptr;  ///< Panel wybrany dla biezacego modelu.
 
-  lgfx::Touch_XPT2046 _touchXpt2046;     ///< Dotyk XPT2046 na wspolnej magistrali.
+  TouchXpt2046 _touchXpt2046;            ///< Dotyk XPT2046 na wspolnej magistrali (z pomiarem nacisku).
   SoftXpt2046 _touchSoftXpt2046;         ///< Dotyk XPT2046 na osobnej magistrali (bit-bang).
   lgfx::Touch_STMPE610 _touchStmpe610;   ///< Dotyk STMPE610 na wspolnej magistrali.
   SoftStmpe610 _touchSoftStmpe610;       ///< Dotyk STMPE610 na osobnej magistrali (bit-bang).

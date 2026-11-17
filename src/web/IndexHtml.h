@@ -160,7 +160,7 @@ const char INDEX_HTML[] PROGMEM = R"rawhtml(
         <label>T_DIN <input type="number" id="tmosi" min="-1" max="48"></label>
         <label>T_DO <input type="number" id="tmiso" min="-1" max="48"></label>
       </div>
-      <p class="muted">Domyślnie dotyk dzieli SCLK, MOSI i MISO z wyświetlaczem (2,5 MHz, osobny CS).
+      <p class="muted">Domyślnie dotyk dzieli SCLK, MOSI i MISO z wyświetlaczem (1 MHz, osobny CS).
         Osobna magistrala jest programowa (XPT2046 i STMPE610).</p>
     </div>
     <div id="touchI2c" hidden>
@@ -200,6 +200,7 @@ const char INDEX_HTML[] PROGMEM = R"rawhtml(
     <div class="buttons">
       <button id="readid" class="alt">Odczytaj ID</button>
       <button id="touchtest" class="alt" disabled>Test dotyku</button>
+      <button id="touchraw" class="alt" disabled>Podgląd dotyku</button>
       <button id="pattern" class="alt">Obraz testowy</button>
       <button id="start">Uruchom test</button>
       <button id="stop" class="stop" disabled>Zatrzymaj</button>
@@ -265,6 +266,7 @@ function updateTouchFields(applyAddr) {
   $('touchSepPins').hidden = !$('tsep').checked;
   if (m && m.bus === 'i2c' && applyAddr) $('taddr').value = '0x' + m.addr.toString(16).toUpperCase();
   $('touchtest').disabled = !m || (polling !== null);
+  $('touchraw').disabled = !m || (polling !== null);
 }
 
 function resetTouchPins() {
@@ -366,6 +368,7 @@ async function updateStatus() {
   $('idInfo').hidden = !s.idInfo;
   $('idInfo').textContent = s.idInfo;
   $('touchtest').disabled = running || !$('touch').value;
+  $('touchraw').disabled = running || !$('touch').value;
   showTouchResult(s.touch);
   $('stop').disabled = !running;
 
@@ -399,6 +402,7 @@ $('start').addEventListener('click', () => startTest('/api/start'));
 $('pattern').addEventListener('click', () => startTest('/api/pattern'));
 $('readid').addEventListener('click', () => startTest('/api/readid'));
 $('touchtest').addEventListener('click', () => startTest('/api/touch'));
+$('touchraw').addEventListener('click', () => startTest('/api/touchraw'));
 $('touch').addEventListener('change', () => updateTouchFields(true));
 $('tsep').addEventListener('change', () => updateTouchFields(false));
 $('touchReset').addEventListener('click', e => { e.preventDefault(); resetTouchPins(); });
