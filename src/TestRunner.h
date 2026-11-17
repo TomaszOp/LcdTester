@@ -7,6 +7,7 @@
 #include "Backlight.h"
 #include "LcdDevice.h"
 #include "LcdTests.h"
+#include "TouchTest.h"
 
 /**
  * @brief Uruchamia test, obraz testowy albo odczyt ID w osobnym zadaniu FreeRTOS.
@@ -32,6 +33,7 @@ class TestRunner {
     FullTest,  ///< Trzy fazy po PHASE_DURATION_MS.
     Pattern,   ///< Tylko start LCD i jeden statyczny obraz testowy.
     ReadId,    ///< Sam odczyt ID sterownika (LcdIdReader, bez LovyanGFX).
+    TouchTest, ///< Test i kalibracja dotyku (TouchTest).
   };
 
   static constexpr uint32_t PHASE_DURATION_MS = 10000;  ///< Czas jednej fazy testu.
@@ -65,6 +67,9 @@ class TestRunner {
   /// @return Kopia biezacego stanu i wynikow.
   Status status() const;
 
+  /// @return Kopia wynikow ostatniego testu dotyku (aktualizowana w trakcie testu).
+  TouchTest::Result touchResult() const { return _touch; }
+
   /**
    * @brief Ustawia jasnosc podswietlenia; dziala w kazdej chwili, takze w trakcie testu.
    * @param percent Jasnosc 0..100 %.
@@ -91,6 +96,8 @@ class TestRunner {
   State runPattern();
   /// Odczyt ID sposobem wybranego modelu.
   State runReadId();
+  /// Test i kalibracja dotyku.
+  State runTouch();
   /// Ustawia komunikat widoczny na stronie.
   void setMessage(const String& msg);
 
@@ -104,5 +111,6 @@ class TestRunner {
   LcdTests::PhaseResult _results[PHASE_COUNT];  ///< Wyniki faz.
   char _message[96] = "Gotowy";                 ///< Komunikat dla uzytkownika.
   char _idInfo[320] = "";                       ///< Rejestry z ostatniego odczytu ID.
+  TouchTest::Result _touch;                     ///< Wyniki ostatniego testu dotyku.
   TaskHandle_t _task = nullptr;                 ///< Uchwyt zadania FreeRTOS.
 };

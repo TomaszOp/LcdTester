@@ -21,6 +21,7 @@
  * | POST | /api/start       | pelny test (3 fazy) |
  * | POST | /api/pattern     | start LCD i jeden statyczny obraz testowy |
  * | POST | /api/readid      | odczyt ID sposobem wybranego modelu, bez LovyanGFX (MISO lub spi3wire=1) |
+ * | POST | /api/touch       | test i kalibracja dotyku (wyswietlacz z tych samych parametrow) |
  * | POST | /api/stop        | przerwanie testu |
  * | GET  | /api/status      | stan testu i wyniki |
  * | POST | /api/brightness  | jasnosc podswietlenia, parametr value=0..100 |
@@ -45,7 +46,7 @@ class WebServerApp {
   /// GET /api/config - dane do formularza strony.
   void handleConfig();
   /**
-   * @brief POST /api/start, /api/pattern, /api/readid - odczyt parametrow i start.
+   * @brief POST /api/start, /api/pattern, /api/readid, /api/touch - odczyt parametrow i start.
    * @param mode Rodzaj zadania dla TestRunner.
    */
   void handleStart(TestRunner::Mode mode);
@@ -57,6 +58,8 @@ class WebServerApp {
   void handleBrightness();
   /// Odpowiedz 404 dla nieznanych adresow.
   void handleNotFound();
+  /// Dopisuje do JSON statusu wyniki testu dotyku (pole "touch"), jesli test byl uruchamiany.
+  void appendTouchJson(String& json);
 
   /**
    * @brief Odczytuje numer pinu z parametru zapytania.

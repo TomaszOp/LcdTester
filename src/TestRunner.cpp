@@ -32,6 +32,63 @@ static bool validPin(int8_t pin) {
   return pin == -1 || (pin >= 0 && GPIO_IS_VALID_OUTPUT_GPIO(pin) && !isFlashPin(pin));
 }
 
+/// @return true dla -1 albo poprawnego GPIO wejsciowego spoza flash.
+static bool validInputPin(int8_t pin) {
+  return pin == -1 || (pin >= 0 && GPIO_IS_VALID_GPIO(pin) && !isFlashPin(pin));
+}
+
+/**
+ * @brief Sprawdza konfiguracje dotyku przed testem dotyku.
+ * @param[out] error Opis problemu.
+ * @return true, gdy konfiguracja jest kompletna.
+ */
+static bool validateTouch(const LcdTestConfig& config, String& error) {
+  const TouchConfig& t = config.touch;
+  const TouchPins& p = t.pins;
+  if (!t.model) {
+    error = "Wybierz kontroler dotyku";
+    return false;
+  }
+  if (!validInputPin(p.irq)) {
+    error = "Nieprawidlowy pin IRQ/INT dotyku";
+    return false;
+  }
+  if (t.model->bus == TouchBus::I2C) {
+    if (p.sda < 0 || p.scl < 0 || !validPin(p.sda) || !validPin(p.scl) || !validPin(p.rst)) {
+      error = "Dotyk I2C wymaga poprawnych pinow SDA i SCL";
+      return false;
+    }
+    if (t.i2cAddr < 0x08 || t.i2cAddr > 0x77) {
+      error = "Adres I2C dotyku poza zakresem 0x08-0x77";
+      return false;
+    }
+    return true;
+  }
+  if (p.cs < 0 || !validPin(p.cs)) {
+    error = "Dotyk SPI wymaga pinu CS (T_CS)";
+    return false;
+  }
+  if (t.separateBus) {
+    if (!t.model->separateBusSupported) {
+      error = "Ten kontroler nie obsluguje osobnej magistrali";
+      return false;
+    }
+    if (p.sclk < 0 || p.mosi < 0 || p.miso < 0 || !validPin(p.sclk) || !validPin(p.mosi) ||
+        !validInputPin(p.miso)) {
+      error = "Osobna magistrala dotyku wymaga pinow T_CLK, T_DIN i T_DO";
+      return false;
+    }
+  } else if (config.pins.miso < 0) {
+    error = "Dotyk na wspolnej magistrali wymaga pinu MISO wyswietlacza";
+    return false;
+  }
+  if (p.cs == config.pins.cs) {
+    error = "CS dotyku musi byc innym pinem niz CS wyswietlacza";
+    return false;
+  }
+  return true;
+}
+
 bool TestRunner::start(const LcdTestConfig& config, Mode mode, String& error) {
   if (isRunning()) {
     error = "Test juz trwa";
@@ -55,6 +112,7 @@ bool TestRunner::start(const LcdTestConfig& config, Mode mode, String& error) {
     error = "Odczyt ID wymaga pinu MISO albo trybu SPI 3-wire";
     return false;
   }
+  if (mode == Mode::TouchTest && !validateTouch(config, error)) return false;
   if (config.spiFreqHz < 100000 || config.spiFreqHz > 80000000) {
     error = "Czestotliwosc SPI poza zakresem 0.1-80 MHz";
     return false;
@@ -106,6 +164,7 @@ void TestRunner::run() {
   switch (_mode) {
     case Mode::Pattern: finalState = runPattern(); break;
     case Mode::ReadId:  finalState = runReadId();  break;
+    case Mode::TouchTest: finalState = runTouch(); break;
     default:            finalState = runPhases();  break;
   }
   // Najpierw zwalniamy uchwyt zadania, potem zmieniamy stan - wtedy mozna od razu
@@ -130,6 +189,25 @@ TestRunner::State TestRunner::runPattern() {
   setMessage(msg);
   Serial.printf("[TEST] %s\n", _message);
   return State::Done;
+}
+
+TestRunner::State TestRunner::runTouch() {
+  LcdDevice lcd(_config);
+  if (!lcd.begin()) {
+    setMessage("Blad inicjalizacji wyswietlacza");
+    return State::Error;
+  }
+  lcd.setRotation(_config.rotation);
+  if (!lcd.beginTouch()) {
+    setMessage("Blad inicjalizacji dotyku - sprawdz kontroler i piny");
+    return State::Error;
+  }
+  Serial.printf("[DOTYK] %s, %s\n", _config.touch.model->name,
+                _config.touch.separateBus ? "osobna magistrala" : "wspolna/I2C");
+  const bool done = TouchTest::run(lcd, _stopRequested, _touch, [this](const char* m) { setMessage(m); });
+  Serial.printf("[DOTYK] %s\n%s\n", _message, _touch.calibrationText);
+  if (_stopRequested) return State::Stopped;
+  return done && _touch.ok ? State::Done : State::Error;
 }
 
 TestRunner::State TestRunner::runReadId() {

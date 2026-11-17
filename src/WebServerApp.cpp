@@ -6,6 +6,7 @@
 
 #include "BoardPins.h"
 #include "LcdModels.h"
+#include "TouchModels.h"
 #include "web/IndexHtml.h"
 
 /**
@@ -34,6 +35,7 @@ void WebServerApp::begin() {
   _server.on("/api/start", HTTP_POST, [this] { handleStart(TestRunner::Mode::FullTest); });
   _server.on("/api/pattern", HTTP_POST, [this] { handleStart(TestRunner::Mode::Pattern); });
   _server.on("/api/readid", HTTP_POST, [this] { handleStart(TestRunner::Mode::ReadId); });
+  _server.on("/api/touch", HTTP_POST, [this] { handleStart(TestRunner::Mode::TouchTest); });
   _server.on("/api/stop", HTTP_POST, [this] { handleStop(); });
   _server.on("/api/status", HTTP_GET, [this] { handleStatus(); });
   _server.on("/api/brightness", HTTP_POST, [this] { handleBrightness(); });
@@ -59,6 +61,20 @@ void WebServerApp::handleConfig() {
           ",\"miso\":" + String(p.miso) + ",\"cs\":" + String(p.cs) + ",\"dc\":" + String(p.dc) +
           ",\"rst\":" + String(p.rst) + ",\"led\":" + String(p.led) + "},";
   json += "\"phaseSeconds\":" + String(TestRunner::PHASE_DURATION_MS / 1000) + ",";
+
+  const TouchPins& t = DEFAULT_TOUCH_PINS;
+  json += "\"touchPins\":{\"tcs\":" + String(t.cs) + ",\"tirq\":" + String(t.irq) +
+          ",\"tsclk\":" + String(t.sclk) + ",\"tmosi\":" + String(t.mosi) + ",\"tmiso\":" + String(t.miso) +
+          ",\"tsda\":" + String(t.sda) + ",\"tscl\":" + String(t.scl) + ",\"trst\":" + String(t.rst) + "},";
+  json += "\"touchModels\":[";
+  for (uint8_t i = 0; i < TOUCH_MODEL_COUNT; i++) {
+    const TouchModel& m = TOUCH_MODELS[i];
+    if (i) json += ',';
+    json += "{\"id\":\"" + jsonEscape(m.id) + "\",\"name\":\"" + jsonEscape(m.name) +
+            "\",\"bus\":\"" + (m.bus == TouchBus::I2C ? "i2c" : "spi") + "\",\"addr\":" + String(m.i2cAddr) +
+            ",\"separate\":" + (m.separateBusSupported ? "true" : "false") + "}";
+  }
+  json += "],";
 
   json += "\"frequencies\":[";
   for (uint8_t i = 0; i < SPI_FREQUENCY_COUNT; i++) {
@@ -112,6 +128,24 @@ void WebServerApp::handleStart(TestRunner::Mode mode) {
   config.pins.rst = argPin("rst", d.rst);
   config.pins.led = argPin("led", d.led);
 
+  // Dotyk - uzywany tylko w tescie dotyku; wyswietlacz bierze ustawienia z powyzszych pol
+  config.touch.model = findTouchModel(_server.arg("touch"));
+  if (config.touch.model) {
+    const TouchPins& td = DEFAULT_TOUCH_PINS;
+    config.touch.separateBus = _server.arg("tsep") == "1";
+    config.touch.i2cAddr = _server.hasArg("taddr") && !_server.arg("taddr").isEmpty()
+                               ? strtol(_server.arg("taddr").c_str(), nullptr, 0)
+                               : config.touch.model->i2cAddr;
+    config.touch.pins.cs = argPin("tcs", td.cs);
+    config.touch.pins.irq = argPin("tirq", td.irq);
+    config.touch.pins.sclk = argPin("tsclk", td.sclk);
+    config.touch.pins.mosi = argPin("tmosi", td.mosi);
+    config.touch.pins.miso = argPin("tmiso", td.miso);
+    config.touch.pins.sda = argPin("tsda", td.sda);
+    config.touch.pins.scl = argPin("tscl", td.scl);
+    config.touch.pins.rst = argPin("trst", td.rst);
+  }
+
   if (_server.hasArg("brightness")) {
     _runner.setBrightness(constrain(_server.arg("brightness").toInt(), 0, 100));
   }
@@ -141,7 +175,7 @@ void WebServerApp::handleBrightness() {
 void WebServerApp::handleStatus() {
   TestRunner::Status s = _runner.status();
   String json;
-  json.reserve(768);
+  json.reserve(2200);
   json += "{\"state\":\"" + String(TestRunner::stateName(s.state)) + "\",";
   json += "\"phase\":" + String(s.phase) + ",";
   json += "\"phaseName\":\"" + String(TestRunner::phaseName(s.phase)) + "\",";
@@ -150,6 +184,7 @@ void WebServerApp::handleStatus() {
   json += "\"freeHeap\":" + String(ESP.getFreeHeap()) + ",";
   json += "\"brightness\":" + String(_runner.brightness()) + ",";
   json += "\"idInfo\":\"" + jsonEscape(s.idInfo) + "\",";
+  appendTouchJson(json);
   json += "\"results\":[";
   for (uint8_t i = 0; i < TestRunner::PHASE_COUNT; i++) {
     if (i) json += ',';
@@ -161,6 +196,29 @@ void WebServerApp::handleStatus() {
 
 void WebServerApp::handleNotFound() {
   sendError(404, "Nie znaleziono");
+}
+
+void WebServerApp::appendTouchJson(String& json) {
+  const TouchTest::Result t = _runner.touchResult();
+  if (!t.active) return;
+  // Dla kazdego punktu: cel, dotkniecie z kalibracji (c*) i z weryfikacji (v*)
+  json += "\"touch\":{\"points\":[";
+  for (uint8_t i = 0; i < TouchTest::POINT_COUNT; i++) {
+    const TouchTest::TestPoint& p = t.points[i];
+    if (i) json += ',';
+    json += "{\"tx\":" + String(p.targetX) + ",\"ty\":" + String(p.targetY) +
+            ",\"cx\":" + String(p.calib.x) + ",\"cy\":" + String(p.calib.y) +
+            ",\"cerr\":" + String(p.calib.error, 1) + ",\"cdone\":" + (p.calib.done ? "true" : "false") +
+            ",\"vx\":" + String(p.verify.x) + ",\"vy\":" + String(p.verify.y) +
+            ",\"verr\":" + String(p.verify.error, 1) + ",\"vdone\":" + (p.verify.done ? "true" : "false") +
+            ",\"ok\":" + (p.ok ? "true" : "false") + "}";
+  }
+  json += "],\"corners\":" + String(TouchTest::CORNER_COUNT) +
+          ",\"calibrated\":" + (t.calibration.valid ? "true" : "false") +
+          ",\"verified\":" + (t.verified ? "true" : "false") +
+          ",\"maxError\":" + String(t.maxError, 1) + ",\"threshold\":" + String(t.threshold, 0) +
+          ",\"ok\":" + (t.ok ? "true" : "false") + ",\"calibration\":\"" + jsonEscape(t.calibrationText) +
+          "\"},";
 }
 
 int8_t WebServerApp::argPin(const char* name, int8_t fallback) {

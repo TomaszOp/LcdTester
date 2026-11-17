@@ -65,12 +65,34 @@ matrycy przez sterownik (tearing).
 | **Odstęp paczek, ms (testy 1-2)** | Puste = brak, 1–100 ms przerwy po każdym kształcie lub napisie. |
 | **Limit FPS (animacje)** | Brak / 30 / 10 / 5 / 1 pełnych klatek na sekundę w fazie 3. |
 
+#### Sekcja „Dotyk”
+
+Kontroler dotyku wybiera się ręcznie (program nie wykrywa modelu). Wyświetlacz do testu
+dotyku – model, rozdzielczość, obrót, SPI – pochodzi z sekcji „Wyświetlacz” i „Szyna SPI”.
+
+| Kontroler | Szyna | Uwagi |
+|---|---|---|
+| **XPT2046** | SPI | Rezystancyjny, typowy przy ILI9341 2.4–3.2". Wspólna lub osobna magistrala. |
+| **STMPE610** | SPI | Rezystancyjny. Wspólna lub osobna magistrala. |
+| **FT6206 / FT6336** | I2C | Pojemnościowy, adres 0x38. |
+| **CST816S** | I2C | Pojemnościowy (często przy GC9A01 i ST7789), adres 0x15. |
+| **GT911** | I2C | Pojemnościowy, adres 0x5D albo 0x14. |
+
+| Ustawienie | Opis |
+|---|---|
+| **CS (T_CS), IRQ (T_IRQ)** | SPI: pin wyboru kontrolera dotyku (musi być inny niż CS wyświetlacza) i opcjonalny pin dotknięcia. |
+| **Osobna magistrala SPI** | Domyślnie dotyk dzieli SCLK, MOSI i MISO z wyświetlaczem (2,5 MHz). Po zaznaczeniu podaje się T_CLK, T_DIN, T_DO – magistrala jest programowa (ESP32-C3 ma jeden wolny sprzętowy SPI, zajęty przez wyświetlacz). Działa dla obu kontrolerów SPI: XPT2046 i STMPE610. |
+| **SDA, SCL, Adres I2C, INT, RST** | I2C: piny i adres (np. `0x38`); INT i RST opcjonalne. Adres ustawia się sam po wyborze kontrolera. |
+
+Wspólna magistrala wymaga podłączenia MISO wyświetlacza (dane dotyku wracają tą linią).
+
 #### Przyciski
 
 | Przycisk | Działanie |
 |---|---|
 | **Odczytaj ID** | Odczyt identyfikatora sterownika sposobem właściwym dla wybranego modelu, bez inicjalizacji ekranu (patrz niżej). |
 | **Obraz testowy** | Start wyświetlacza i jeden statyczny obraz: paski kolorów, gradienty R/G/B/szary, siatka, koło z krzyżem (kontrola proporcji), ramka 1 px i kolorowe narożniki (kontrola przesunięcia), podpis z parametrami. Obraz idzie jednym przesłaniem, gdy starczy RAM na bufor całego ekranu. |
+| **Test dotyku** | Kalibracja i weryfikacja dotyku (aktywny, gdy wybrano kontroler). |
 | **Uruchom test** | Pełny test 3 × 10 s. |
 | **Zatrzymaj** | Przerywa test od razu. |
 
@@ -99,6 +121,30 @@ albo opcji 3-wire. Wynik:
 
 Szczegóły każdego rejestru (odczytane i oczekiwane bajty) są w sekcji „Wyniki”.
 
+#### Test dotyku
+
+Test używa 8 punktów: 4 rogów prostokąta (ok. 10 % od krawędzi) i 4 punktów losowych
+wewnątrz niego.
+
+1. **Kalibracja** – kolejno wszystkie 8 krzyżyków (najpierw rogi, potem losowe). Z każdego
+   dotknięcia brana jest mediana kilku odczytów.
+2. Program liczy kalibrację ze wszystkich 8 punktów metodą najmniejszych kwadratów
+   (piksel = a·surowyX + b·surowyY + c), co obejmuje skalę, przesunięcie, odwrócenie
+   i zamianę osi – działa przy każdym obrocie.
+3. **Weryfikacja** – te same 8 punktów wyświetlane ponownie. Każde dotknięcie jest przeliczane
+   przez kalibrację i porównywane z celem; punkt jest OK, gdy błąd nie przekracza progu
+   (8 px albo 4 % krótszego boku).
+4. **Wynik na LCD** – wzorcowy prostokąt (szary), prostokąt z dotknięć weryfikacji (zielony),
+   przy każdym punkcie cel (zielony = OK, czerwony = poza progiem), miejsce dotyku (żółte)
+   i linia błędu (czerwona). Całość OK, gdy wszystkie 8 punktów jest OK.
+5. **Rysowanie palcem** przez 10 s, potem ponownie ekran wyniku.
+
+Na stronie jest tabela 8 punktów: cel, położenie z kalibracji (po przeliczeniu – pokazuje,
+jak dobrze kalibracja dopasowała się do dotknięć), położenie z weryfikacji, błąd i ocena.
+Pod nią współczynniki kalibracji do skopiowania (wzory, zamiana/odwrócenie osi i gotowa
+tablica `cal[8]` dla `setTouchCalibrate()` w LovyanGFX).
+Brak dotknięcia przez 15 s kończy test komunikatem „Brak odpowiedzi dotyku”.
+
 ### Domyślne piny ESP32-C3
 
 | SCLK | MOSI | MISO | CS | DC | RST | LED |
@@ -107,6 +153,9 @@ Szczegóły każdego rejestru (odczytane i oczekiwane bajty) są w sekcji „Wyn
 
 SCLK, MOSI, MISO i CS to natywne piny SPI2 (IO MUX), co pomaga przy wysokich
 częstotliwościach. Do tego zasilanie 3V3 i GND.
+
+Dotyk: T_CS = GPIO 5 (SPI), SDA = GPIO 5 i SCL = GPIO 0 (I2C). Na ESP32-C3 zostaje niewiele
+wolnych pinów, więc osobna magistrala dotyku nie ma domyślnych pinów – trzeba je wpisać.
 
 ---
 
@@ -125,6 +174,10 @@ Kod ma budowę modułową; każdy plik `.h` jest opisany w formacie Doxygen
 | `src/LcdTests.h/.cpp` | Fazy testu, obraz testowy, ekran startowy i końcowy, bufory animacji. |
 | `src/TestRunner.h/.cpp` | Uruchamianie testu w osobnym zadaniu FreeRTOS, walidacja parametrów, stan i wyniki. |
 | `src/LcdIdReader.h/.cpp` | Programowy odczyt ID sterownika i porównanie z modelem. |
+| `src/TouchModels.h/.cpp` | **Spis kontrolerów dotyku**: szyna, adres I2C, obsługa osobnej magistrali. |
+| `src/TouchTest.h/.cpp` | Test dotyku: kalibracja z 8 punktów, weryfikacja na tych samych punktach, ekran wyniku, rysowanie palcem. |
+| `src/SoftXpt2046.h/.cpp` | XPT2046 na osobnej, programowej magistrali SPI (sterownik zgodny z LovyanGFX). |
+| `src/SoftStmpe610.h/.cpp` | STMPE610 na osobnej, programowej magistrali SPI (sekwencja startu jak w LovyanGFX, automatyczny wybór trybu SPI 0/1). |
 | `src/Backlight.h/.cpp` | Podświetlenie – PWM na pinie LED. |
 | `src/WifiConnection.h/.cpp` | WiFi, zapasowy punkt dostępowy, mDNS. |
 | `src/WebServerApp.h/.cpp` | Serwer WWW i API JSON. |
@@ -156,12 +209,15 @@ przeglądarka ──HTTP──> WebServerApp ──LcdTestConfig──> TestRunn
 | POST | `/api/start` | pełny test |
 | POST | `/api/pattern` | obraz testowy |
 | POST | `/api/readid` | odczyt ID |
+| POST | `/api/touch` | test dotyku |
 | POST | `/api/stop` | przerwanie testu |
 | GET | `/api/status` | stan, wyniki, komunikat, wolna pamięć, jasność |
 | POST | `/api/brightness?value=0..100` | jasność podświetlenia |
 
-Parametry `start` / `pattern` / `readid`: `model`, `res`, `rot`, `freq`, `mode`, `invert`,
-`swaprb`, `spi3wire`, `brightness`, `delay`, `fps`, `sclk`, `mosi`, `miso`, `cs`, `dc`, `rst`, `led`.
+Parametry `start` / `pattern` / `readid` / `touch`: `model`, `res`, `rot`, `freq`, `mode`, `invert`,
+`swaprb`, `spi3wire`, `brightness`, `delay`, `fps`, `sclk`, `mosi`, `miso`, `cs`, `dc`, `rst`, `led`,
+a dla dotyku: `touch` (id kontrolera), `tsep`, `taddr`, `tcs`, `tirq`, `tsclk`, `tmosi`, `tmiso`,
+`tsda`, `tscl`, `trst`. Wynik testu dotyku jest w polu `touch` odpowiedzi `/api/status`.
 
 ### Konfiguracja PlatformIO
 
@@ -255,6 +311,18 @@ Tak samo został dodany GC9A01A – można podejrzeć jego wpisy w kodzie.
    **Odczytaj ID** i pełny test.
 
 Pola `LcdModel` i `LcdIdStep` są szczegółowo opisane w komentarzach Doxygen w `src/LcdModels.h`.
+
+### Nowy kontroler dotyku
+
+Spis kontrolerów jest w `src/TouchModels.cpp` (tablica `TOUCH_MODELS`).
+
+1. Dodaj kontroler do `TouchController` w `src/TouchModels.h`.
+2. W `src/LcdDevice.h` dodaj obiekt sterownika LovyanGFX (np. `lgfx::Touch_NS2009`, lista
+   w katalogu `lgfx/v1/touch` biblioteki), a w `LcdDevice::setupTouch()` wybierz go w `switch`.
+3. Dopisz wpis do `TOUCH_MODELS`: id, nazwa, kontroler, szyna (`TouchBus::SPI` / `I2C`),
+   domyślny adres I2C, czy obsługuje osobną magistralę.
+
+Strona pobierze nowy kontroler z `/api/config` sama.
 
 ### Inna wersja ESP32
 

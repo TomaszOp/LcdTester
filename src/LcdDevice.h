@@ -9,6 +9,19 @@
 
 #include "BoardPins.h"
 #include "LcdModels.h"
+#include "SoftStmpe610.h"
+#include "SoftXpt2046.h"
+#include "TouchModels.h"
+
+/**
+ * @brief Parametry kontrolera dotyku wybrane na stronie.
+ */
+struct TouchConfig {
+  const TouchModel* model = nullptr;    ///< Kontroler z ::TOUCH_MODELS, nullptr = brak dotyku.
+  bool separateBus = false;             ///< SPI: osobna (programowa) magistrala zamiast wspolnej z LCD.
+  uint8_t i2cAddr = 0;                  ///< I2C: adres kontrolera.
+  TouchPins pins = DEFAULT_TOUCH_PINS;  ///< Piny dotyku.
+};
 
 /**
  * @brief Komplet parametrow jednego testu, wybieranych na stronie WWW.
@@ -25,6 +38,7 @@ struct LcdTestConfig {
   LcdPins pins = DEFAULT_LCD_PINS;  ///< Piny GPIO wyswietlacza.
   uint16_t packetDelayMs = 0;       ///< Fazy 1-2: odstep po kazdej paczce w ms, 0 = brak.
   uint8_t fpsLimit = 0;             ///< Faza 3: limit pelnych klatek na sekunde, 0 = brak.
+  TouchConfig touch;                ///< Kontroler dotyku (uzywany tylko w tescie dotyku).
 
   /// @return Wybrana rozdzielczosc (wymaga ustawionego model).
   const LcdResolution& resolution() const {
@@ -61,6 +75,12 @@ class LcdDevice : public lgfx::LGFX_Device {
    */
   bool begin();
 
+  /**
+   * @brief Uruchamia kontroler dotyku z LcdTestConfig::touch (po begin()).
+   * @return true, gdy kontroler jest skonfigurowany i jego inicjalizacja sie powiodla.
+   */
+  bool beginTouch();
+
  private:
   lgfx::Bus_SPI _bus;                    ///< Szyna SPI (SPI2_HOST, DMA).
   lgfx::Panel_ILI9341 _panelIli9341;     ///< Panel dla LcdDriver::ILI9341.
@@ -69,4 +89,17 @@ class LcdDevice : public lgfx::LGFX_Device {
   lgfx::Panel_ILI9488 _panelIli9488;     ///< Panel dla LcdDriver::ILI9488.
   lgfx::Panel_GC9A01 _panelGc9a01;       ///< Panel dla LcdDriver::GC9A01A.
   lgfx::Panel_Device* _panel = nullptr;  ///< Panel wybrany dla biezacego modelu.
+
+  lgfx::Touch_XPT2046 _touchXpt2046;     ///< Dotyk XPT2046 na wspolnej magistrali.
+  SoftXpt2046 _touchSoftXpt2046;         ///< Dotyk XPT2046 na osobnej magistrali (bit-bang).
+  lgfx::Touch_STMPE610 _touchStmpe610;   ///< Dotyk STMPE610 na wspolnej magistrali.
+  SoftStmpe610 _touchSoftStmpe610;       ///< Dotyk STMPE610 na osobnej magistrali (bit-bang).
+  lgfx::Touch_FT5x06 _touchFt6x36;       ///< Dotyk FT6206 / FT6336.
+  lgfx::Touch_CST816S _touchCst816s;     ///< Dotyk CST816S.
+  lgfx::Touch_GT911 _touchGt911;         ///< Dotyk GT911.
+  lgfx::ITouch* _touch = nullptr;        ///< Wybrany kontroler dotyku albo nullptr.
+
+  /// Wybiera i konfiguruje sterownik dotyku (bez inicjalizacji).
+  void setupTouch(const TouchConfig& touch);
+  bool _touchI2c = false;                ///< Czy dotyk uzywa I2C (do zwolnienia w destruktorze).
 };
